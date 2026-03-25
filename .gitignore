@@ -1,0 +1,29 @@
+# Data (large files, never commit)
+data/
+archive/
+*.psv
+*.zip
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+
+# Node / Next.js
+node_modules/
+.next/
+.env.local
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Benchmark output (re-generate, don't commit)
+benchmark_results.json

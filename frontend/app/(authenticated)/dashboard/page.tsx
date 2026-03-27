@@ -9,7 +9,7 @@ import AlertTable from "@/components/AlertTable";
 import { Toaster, toaster } from "@/components/ui/sonner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase";
 
 export default function DashboardPage() {
   const [patients, setPatients] = useState<PatientSummary[]>([]);
@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const loadPatients = useCallback(async () => {
     try {

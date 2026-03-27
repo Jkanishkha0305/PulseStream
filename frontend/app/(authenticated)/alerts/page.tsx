@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getAlerts, updateAlert, type Alert } from "@/lib/api";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase";
 import { Toaster, toaster } from "@/components/ui/sonner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select } from "@/components/ui/select";
@@ -55,7 +55,7 @@ export default function AlertsPage() {
   const [saving, setSaving] = useState(false);
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const fetchAlerts = useCallback(async () => {
     try {

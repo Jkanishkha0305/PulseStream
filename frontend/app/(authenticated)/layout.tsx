@@ -37,30 +37,35 @@ export default function AuthenticatedLayout({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-64 bg-slate-900 h-screen fixed flex flex-col">
-        <div className="px-6 py-5 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
-            <span className="font-semibold text-white tracking-tight">PulseStream</span>
+      <aside className="w-56 bg-slate-900 h-screen fixed flex flex-col border-r border-slate-800">
+        <div className="px-5 py-5 border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <span className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="font-semibold text-white tracking-tight text-sm">
+              PulseStream
+            </span>
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navLinks.map((link) => (
-            <Link key={link.href} href={link.href}>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  pathname === link.href || pathname.startsWith(link.href + "/")
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400"
-                )}
-              >
-                {link.label}
-              </Button>
-            </Link>
-          ))}
+        <nav className="flex-1 px-3 py-4 space-y-0.5">
+          {navLinks.map((link) => {
+            const isActive =
+              pathname === link.href || pathname.startsWith(link.href + "/");
+            return (
+              <Link key={link.href} href={link.href}>
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all",
+                    isActive
+                      ? "bg-slate-800 text-white border-l-2 border-violet-500 pl-[10px]"
+                      : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
+                  )}
+                >
+                  {link.label}
+                </div>
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="px-4 py-4 border-t border-slate-800 space-y-3">
@@ -68,14 +73,14 @@ export default function AuthenticatedLayout({
           <Button
             variant="ghost"
             onClick={handleSignOut}
-            className="w-full justify-start text-slate-400 hover:text-red-400"
+            className="w-full justify-start text-slate-500 hover:text-red-400 text-xs"
           >
             Sign Out
           </Button>
         </div>
       </aside>
 
-      <main className="ml-64 flex-1 min-h-screen bg-slate-950">
+      <main className="ml-56 flex-1 min-h-screen bg-slate-950">
         {children}
       </main>
     </div>

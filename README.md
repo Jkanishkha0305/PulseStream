@@ -1,3 +1,5 @@
+<div align="center">
+
 # PulseStream
 
 > Real-Time ICU Patient Anomaly Detection Pipeline
@@ -8,19 +10,9 @@
 ![Numba](https://img.shields.io/badge/Numba-0.61-orange)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white)
 
-A full-stack, performance-focused pipeline that processes multi-patient ICU vital signs in real time, detects patient deterioration using a tiered anomaly detection system, and visualizes results in a live clinical dashboard. Built for the NYU Advanced Python course.
+A full-stack, performance-focused pipeline that processes multi-patient ICU vital signs in real time, detects patient deterioration using a tiered anomaly detection system, and visualizes results in a live clinical dashboard.
 
----
-
-## Team
-
-| Name | NetID |
-|------|-------|
-| Arya Kotibhaskar | aak10234 |
-| Jeethu Srinivas Amuthan | ja5163 |
-| Kanishkha Jaisankar | kj2675 |
-| Siya Koppikar | sk11806 |
-| Vrinda Tibrewal | vt2370 |
+</div>
 
 ---
 

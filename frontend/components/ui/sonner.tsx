@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -15,9 +15,7 @@ interface ToasterContextValue {
   dismiss: (id: string) => void;
 }
 
-const ToasterContext = typeof window !== "undefined"
-  ? require("react").createContext<ToasterContextValue>({ toasts: [], toast: () => {}, dismiss: () => {} })
-  : null;
+const ToasterContext = createContext<ToasterContextValue>({ toasts: [], toast: () => {}, dismiss: () => {} });
 
 let listeners: Array<(toasts: Toast[]) => void> = [];
 let toastList: Toast[] = [];
@@ -101,4 +99,4 @@ export function Toaster() {
   );
 }
 
-export { toaster };
+

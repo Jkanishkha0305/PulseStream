@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 from dotenv import load_dotenv
 
 from db.supabase_client import get_supabase
@@ -13,7 +14,8 @@ from pipeline.buffer import PatientBuffer
 from pipeline.detector import AnomalyDetector
 from pipeline.optimizer import warmup
 
-load_dotenv()
+# Load .env from the directory this file lives in, regardless of CWD
+load_dotenv(Path(__file__).parent / ".env")
 
 DATA_DIR = os.getenv("DATA_DIR", "/tmp/pulsestream/data")
 WINDOW_SIZE = int(os.getenv("WINDOW_SIZE", "30"))

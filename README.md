@@ -1,167 +1,211 @@
 # PulseStream
 
-> Profiling and Optimizing a Real-Time ICU Patient Anomaly Detection Pipeline
+> Real-Time ICU Patient Anomaly Detection Pipeline
 
-A performance-focused Python pipeline that processes multi-patient ICU vital signs, detects patient deterioration using sliding window anomaly detection, and demonstrates progressive speedups through profiling, NumPy vectorization, Numba JIT compilation, and multiprocessing.
+![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16.2-black?logo=next.js&logoColor=white)
+![Numba](https://img.shields.io/badge/Numba-0.61-orange)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white)
+
+A full-stack, performance-focused pipeline that processes multi-patient ICU vital signs in real time, detects patient deterioration using a tiered anomaly detection system, and visualizes results in a live clinical dashboard. Built for the NYU Advanced Python course.
+
+---
 
 ## Team
 
-- **Arya Kotibhaskar** — aak10234
-- **Jeethu Srinivas Amuthan** — ja5163
-- **Kanishkha Jaisankar** — kj2675
-- **Siya Koppikar** — sk11806
-- **Vrinda Tibrewal** — vt2370
+| Name | NetID |
+|------|-------|
+| Arya Kotibhaskar | aak10234 |
+| Jeethu Srinivas Amuthan | ja5163 |
+| Kanishkha Jaisankar | kj2675 |
+| Siya Koppikar | sk11806 |
+| Vrinda Tibrewal | vt2370 |
+
+---
 
 ## Architecture
 
 ```
-pulsestream/
-├── backend/              # FastAPI pipeline server
-│   ├── main.py          # API entrypoint
-│   ├── pipeline/        # Core processing modules
-│   │   ├── simulator.py    # Patient vital sign generator
-│   │   ├── buffer.py       # Sliding window buffer
-│   │   ├── detector.py    # Anomaly detection (Numba JIT)
-│   │   ├── optimizer.py    # Optimization strategies
-│   │   └── benchmark.py    # Benchmarking suite
-│   ├── api/routes/      # API endpoints
-│   └── db/              # Supabase integration
-├── frontend/            # Next.js 14 dashboard
-│   ├── app/             # App router pages
-│   └── components/      # UI components
-└── Makefile            # Development commands
+┌─────────────────────────────────────────────────────────────┐
+│                         PulseStream                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────┐   REST API  ┌─────────────┐               │
+│  │  Next.js 16 │◀───────────▶│   FastAPI   │               │
+│  │  Dashboard  │             │   Backend   │               │
+│  └─────────────┘             └──────┬──────┘               │
+│         │ Realtime                  │                       │
+│         │                    ┌──────▼──────┐               │
+│         │                    │  Detection  │               │
+│         │                    │   Pipeline  │               │
+│         │                    └──────┬──────┘               │
+│         │                           │                       │
+│  ┌──────▼───────────────────────────▼─────┐               │
+│  │              Supabase                   │               │
+│  │    vital_readings  │  alerts            │               │
+│  └─────────────────────────────────────────┘               │
+│                                                             │
+│  Pipeline: StreamSimulator → PatientBuffer → AnomalyDetector│
+│                                                             │
+│  Tier 1: Z-Score + IQR     (~1ms,  Numba JIT)              │
+│  Tier 2: Isolation Forest  (~10ms, only if severity > 0.5) │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Tech Stack
+
+**Backend:** FastAPI · NumPy · Numba · Pandas · Scikit-learn · Supabase Python SDK · uv
+
+**Frontend:** Next.js 16 · React 18 · Tailwind CSS · Recharts · Supabase SSR · TypeScript
+
+**Database:** Supabase (PostgreSQL) with Realtime subscriptions
+
+---
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.10+ with [uv](https://github.com/astral-sh/uv)
+- Python 3.13+
+- [uv](https://github.com/astral-sh/uv) — Python package manager
 - Node.js 18+
-- npm or yarn
 
-### Setup
+### 1. Install dependencies
 
 ```bash
-# Clone and navigate
-cd pulsestream
-
-# Install all dependencies
 make install
+```
 
-# Copy environment files
+### 2. Configure environment
+
+```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.local.example frontend/.env.local
 ```
 
-### Development
+Fill in your Supabase credentials from **Settings → API** in your Supabase project:
+
+**`backend/.env`**
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=eyJ...   # service_role key
+```
+
+**`frontend/.env.local`**
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...   # anon/public key
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+### 3. Run
 
 ```bash
 make dev
 ```
 
-This starts:
-- **Backend API** at `http://localhost:8000`
-- **Frontend** at `http://localhost:3000`
+| Service | URL |
+|---------|-----|
+| Frontend Dashboard | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| API Docs | http://localhost:8000/docs |
 
-### Benchmarking
+---
+
+## Optimization Pipeline
+
+The benchmark measures 5 progressive optimization stages across detection latency:
+
+| Stage | Technique | Description |
+|-------|-----------|-------------|
+| Baseline | Pure Python loops | Reference implementation |
+| NumPy | Vectorized ops | Array-based sliding window |
+| Numba JIT | LLVM compilation | JIT-compiled Z-score + IQR |
+| Multiprocessing | Parallel workers | 4-process pool for patient batches |
+| Float32 | Reduced precision | Half memory, better SIMD throughput |
 
 ```bash
 make benchmark
 ```
 
-Runs the full optimization pipeline and saves results to `backend/benchmark_results.json`.
+Results saved to `backend/benchmark_results.json` and displayed in the dashboard.
 
-## Optimization Pipeline
-
-| Stage | Technique | Speedup Target |
-|-------|-----------|---------------|
-| 1 | Python loops (baseline) | 1x |
-| 2 | NumPy vectorization | ~10-50x |
-| 3 | Numba JIT compilation | ~50-200x |
-| 4 | Multiprocessing (4 workers) | ~100-500x |
+---
 
 ## Dataset
 
-Uses simulated ICU vital signs data modeled after the [PhysioNet Early Prediction of Sepsis dataset](https://physionet.org/content/challenge-2019/1.0.0/).
+Uses the [PhysioNet Challenge 2012](https://physionet.org/content/challenge-2012/1.0.0/) dataset (~4,000 ICU patients, pipe-separated PSV format).
 
-Vitals monitored:
-- Heart rate (bpm)
-- Blood pressure (systolic/diastolic)
-- SpO₂ (%)
-- Temperature (°C)
-- Respiratory rate (/min)
+Vitals monitored per patient:
 
-## Tech Stack
-
-**Backend:** FastAPI · NumPy · Numba · Pandas · SciPy · Scikit-learn
-
-**Frontend:** Next.js 14 · React · Tailwind CSS · shadcn/ui · Recharts · Supabase
-
-**Package Manager:** [uv](https://github.com/astral-sh/uv) (Python)
-
-## Deployment
-
-### Vercel (Frontend)
-
-1. Push code to GitHub
-2. Import project in Vercel
-3. Configure environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_API_URL` (Railway backend URL)
-4. Deploy
-
-### Railway (Backend)
-
-1. Push code to GitHub
-2. Import project in Railway
-3. Configure environment variables:
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_KEY`
-   - `DATA_DIR=/data`
-4. Deploy
-
-## Live Demo
-
-[View Live Demo on Vercel →]()
+| Vital | Unit | Normal Range |
+|-------|------|-------------|
+| Heart Rate | bpm | 60–100 |
+| Systolic BP | mmHg | 90–140 |
+| SpO₂ | % | 95–100 |
+| Temperature | °C | 36.5–37.5 |
+| Resp. Rate | /min | 12–20 |
 
 ---
 
-## Architecture Diagram
+## API Endpoints
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              PulseStream                                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐             │
-│  │   Frontend  │────▶│   Backend    │────▶│  Supabase   │             │
-│  │  (Next.js)  │◀────│  (FastAPI)   │◀────│  (Database) │             │
-│  └──────────────┘     └──────────────┘     └──────────────┘             │
-│         │                    │                                              │
-│         │                    ▼                                              │
-│         │            ┌──────────────┐                                     │
-│         │            │   Pipeline   │                                     │
-│         │            └──────────────┘                                     │
-│         │                   │                                            │
-│         ▼                   ▼                                            │
-│  ┌─────────────────────────────────────────────────────┐                  │
-│  │              Detection Tiers                        │                  │
-│  │  ┌─────────────┐    ┌─────────────┐    ┌─────────┐ │                  │
-│  │  │ Tier 1      │    │ Tier 2      │    │ Tier 3 │ │                  │
-│  │  │ Z-Score +   │    │ Isolation   │    │ LSTM   │ │                  │
-│  │  │ IQR         │    │ Forest      │    │        │ │                  │
-│  │  └─────────────┘    └─────────────┘    └─────────┘ │                  │
-│  └─────────────────────────────────────────────────────┘                  │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-## Screenshot
-
-![Dashboard Screenshot]()
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/patients` | All patients with latest vitals |
+| GET | `/api/patients/{id}` | Single patient vital history |
+| GET | `/api/alerts` | All alerts with filters |
+| PATCH | `/api/alerts/{id}` | Update alert status |
+| GET | `/api/benchmark` | Latest benchmark results |
+| GET | `/health` | Health check |
 
 ---
 
-**Monitoring:** cProfile · memory-profiler · line-profiler
+## Project Structure
+
+```
+pulsestream/
+├── backend/
+│   ├── main.py                  # FastAPI app + pipeline loop
+│   ├── pipeline/
+│   │   ├── simulator.py         # Streams PhysioNet data per patient
+│   │   ├── buffer.py            # Sliding window deque (30 readings)
+│   │   ├── detector.py          # Tier 1 (Z-Score/IQR) + Tier 2 (IsolationForest)
+│   │   ├── optimizer.py         # Numba JIT warmup + optimization stages
+│   │   └── benchmark.py         # Full benchmark suite
+│   ├── api/routes/
+│   │   ├── patients.py
+│   │   ├── alerts.py
+│   │   └── benchmark.py
+│   └── db/
+│       └── supabase_client.py
+├── frontend/
+│   ├── app/
+│   │   ├── page.tsx                     # Login
+│   │   └── (authenticated)/
+│   │       ├── dashboard/page.tsx       # ICU overview
+│   │       ├── patient/[id]/page.tsx    # Patient detail + charts
+│   │       └── alerts/page.tsx          # Alert management
+│   ├── components/
+│   │   ├── VitalsChart.tsx              # Recharts vitals history
+│   │   └── PatientList.tsx              # Severity-coded patient list
+│   └── lib/
+│       ├── api.ts                       # Backend API client
+│       └── supabase.ts                  # Supabase browser client
+└── Makefile
+```
+
+---
+
+## Makefile Commands
+
+```bash
+make install    # Install all dependencies (backend + frontend)
+make dev        # Start both servers (backend :8000, frontend :3000)
+make benchmark  # Run optimization benchmark suite
+make test       # Run all tests
+make clean      # Remove build artifacts and node_modules
+```

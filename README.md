@@ -10,11 +10,27 @@
 ![Numba](https://img.shields.io/badge/Numba-0.61-orange)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white)
 
-A full-stack, performance-focused pipeline that processes multi-patient ICU vital signs in real time, detects patient deterioration using a tiered anomaly detection system, and visualizes results in a live clinical dashboard.
-
 </div>
 
 ---
+
+# 🏥 PulseStream – Real-Time ICU Patient Anomaly Detection Pipeline
+
+A full-stack, performance-focused pipeline that ingests multi-patient ICU vital signs from the [PhysioNet Challenge 2012](https://physionet.org/content/challenge-2012/1.0.0/) dataset (~4,000 patients), detects patient deterioration using a **tiered anomaly detection system**, and visualizes live alerts and vitals trends in a **real-time clinical dashboard**.
+
+---
+
+## 🧠 Why PulseStream?
+
+ICU environments generate continuous, high-frequency vital sign data across dozens of patients simultaneously. Manual monitoring is error-prone and slow. PulseStream automates deterioration detection with a **two-tier architecture** that balances speed and accuracy:
+
+- **Tier 1** — Z-Score + IQR via **Numba JIT** (~1ms): fast statistical screening on every reading
+- **Tier 2** — **Isolation Forest** (~10ms): ML-based confirmation, triggered only when severity > 0.5
+
+This design ensures critical alerts surface in **under 10ms** while keeping compute costs low.
+
+---
+
 
 ## Architecture
 

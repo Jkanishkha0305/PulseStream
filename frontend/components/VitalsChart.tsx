@@ -1,3 +1,14 @@
+/**
+ * VitalsChart — Neon Glow Styling
+ *
+ * Visual decisions:
+ * - Lines get SVG drop-shadow filter for neon glow effect
+ * - Anomaly points render as pulsing red rings (outer ring + inner dot)
+ * - Tooltip uses glass morphism styling
+ * - Grid lines are subtle (rgba white 5%)
+ * - Reference areas use very low opacity to not compete with glow lines
+ */
+
 "use client";
 
 import {
@@ -8,7 +19,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceArea,
-  Dot,
 } from "recharts";
 import type { VitalReading } from "@/lib/api";
 
@@ -19,10 +29,10 @@ interface Props {
 }
 
 const VITAL_CONFIG = {
-  hr: { name: "Heart Rate", unit: "bpm", normalMin: 60, normalMax: 100, color: "#f87171" },
-  o2sat: { name: "SpO₂", unit: "%", normalMin: 95, normalMax: 100, color: "#38bdf8" },
-  sbp: { name: "Systolic BP", unit: "mmHg", normalMin: 90, normalMax: 140, color: "#fb923c" },
-  resp: { name: "Resp. Rate", unit: "/min", normalMin: 12, normalMax: 20, color: "#a78bfa" },
+  hr: { name: "Heart Rate", unit: "bpm", normalMin: 60, normalMax: 100, color: "#ff4757" },
+  o2sat: { name: "SpO₂", unit: "%", normalMin: 95, normalMax: 100, color: "#1e90ff" },
+  sbp: { name: "Systolic BP", unit: "mmHg", normalMin: 90, normalMax: 140, color: "#ff6348" },
+  resp: { name: "Resp. Rate", unit: "/min", normalMin: 12, normalMax: 20, color: "#a29bfe" },
 };
 
 const formatTime = (timestamp: number): string => {
@@ -31,25 +41,41 @@ const formatTime = (timestamp: number): string => {
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 };
 
-function AnomalyDot(props: any) {
-  const { cx, cy, payload, dataKey } = props;
-  if (!cx || !cy) return null;
+function AnomalyDot({ cx, cy, payload, dataKey }: { cx?: number; cy?: number; payload?: { anomaly_flags?: string[] }; dataKey?: string }) {
+  if (!cx || !cy || !payload || !dataKey) return null;
   const flags = payload.anomaly_flags || [];
   const isAnomaly =
     flags.includes(dataKey) ||
     flags.includes(dataKey === "o2sat" ? "O2Sat" : dataKey.toUpperCase());
   if (isAnomaly) {
-    return <Dot cx={cx} cy={cy} r={5} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
+    return (
+      <g>
+        {/* Outer pulsing ring */}
+        <circle cx={cx} cy={cy} r={8} fill="none" stroke="#ef4444" strokeWidth={1.5} opacity={0.4}>
+          <animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite" />
+        </circle>
+        {/* Inner dot */}
+        <circle cx={cx} cy={cy} r={4} fill="#ef4444" stroke="#fff" strokeWidth={2} />
+      </g>
+    );
   }
   return null;
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
+interface TooltipPayloadEntry {
+  dataKey: string;
+  color: string;
+  value?: number;
+  payload?: { anomaly_flags?: string[] };
+}
+
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string }) {
+  if (!active || !payload || payload.length === 0) return null;
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-xl text-xs space-y-1.5">
+    <div className="backdrop-blur-xl bg-slate-900/90 border border-white/10 rounded-xl p-3 shadow-xl text-xs space-y-1.5">
       <p className="text-slate-400 font-mono mb-2">{label}</p>
-      {payload.map((entry: any) => (
+      {payload.map((entry) => (
         <div key={entry.dataKey} className="flex items-center justify-between gap-6">
           <span className="text-slate-400 font-mono uppercase text-[10px]">{entry.dataKey}</span>
           <span className="text-white font-mono font-bold" style={{ color: entry.color }}>
@@ -57,11 +83,11 @@ function CustomTooltip({ active, payload, label }: any) {
           </span>
         </div>
       ))}
-      {payload[0]?.payload?.anomaly_flags?.length > 0 && (
-        <div className="pt-1.5 mt-1.5 border-t border-slate-700">
+      {payload[0].payload?.anomaly_flags && payload[0].payload.anomaly_flags.length > 0 && (
+        <div className="pt-1.5 mt-1.5 border-t border-white/10">
           <div className="flex gap-1 flex-wrap">
             {payload[0].payload.anomaly_flags.map((f: string) => (
-              <span key={f} className="text-[9px] px-1.5 py-0.5 rounded bg-red-900/60 text-red-300 border border-red-800 font-mono">
+              <span key={f} className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/20 font-mono">
                 {f}
               </span>
             ))}
@@ -71,6 +97,7 @@ function CustomTooltip({ active, payload, label }: any) {
     </div>
   );
 }
+
 
 export default function VitalsChart({ data, height = 300 }: Props) {
   const chartData = [...data].reverse().map((r) => ({
@@ -96,14 +123,14 @@ export default function VitalsChart({ data, height = 300 }: Props) {
         <XAxis
           dataKey="timestamp"
           tickFormatter={formatTime}
-          stroke="#334155"
-          tick={{ fontSize: 10, fill: "#64748b", fontFamily: "monospace" }}
-          axisLine={{ stroke: "#1e293b" }}
+          stroke="rgba(255,255,255,0.08)"
+          tick={{ fontSize: 10, fill: "#64748b", fontFamily: "var(--font-jetbrains, monospace)" }}
+          axisLine={{ stroke: "rgba(255,255,255,0.05)" }}
           tickLine={false}
         />
         <YAxis
-          stroke="#334155"
-          tick={{ fontSize: 10, fill: "#64748b", fontFamily: "monospace" }}
+          stroke="rgba(255,255,255,0.08)"
+          tick={{ fontSize: 10, fill: "#64748b", fontFamily: "var(--font-jetbrains, monospace)" }}
           axisLine={false}
           tickLine={false}
         />
@@ -112,44 +139,44 @@ export default function VitalsChart({ data, height = 300 }: Props) {
         {/* Normal range shaded areas */}
         <ReferenceArea
           y1={60} y2={100}
-          fill="#10b981" fillOpacity={0.04}
+          fill="#10b981" fillOpacity={0.03}
           strokeOpacity={0}
         />
         <ReferenceArea
           y1={95} y2={100}
-          fill="#38bdf8" fillOpacity={0.04}
+          fill="#38bdf8" fillOpacity={0.03}
           strokeOpacity={0}
         />
         <ReferenceArea
           y1={90} y2={140}
-          fill="#fb923c" fillOpacity={0.04}
+          fill="#fb923c" fillOpacity={0.03}
           strokeOpacity={0}
         />
         <ReferenceArea
           y1={12} y2={20}
-          fill="#a78bfa" fillOpacity={0.04}
+          fill="#a78bfa" fillOpacity={0.03}
           strokeOpacity={0}
         />
 
         <Line
           type="monotone" dataKey="hr" stroke={VITAL_CONFIG.hr.color}
-          strokeWidth={1.5} dot={<AnomalyDot />}
-          connectNulls strokeOpacity={0.8}
+          strokeWidth={2} dot={<AnomalyDot />}
+          connectNulls strokeOpacity={0.9}
         />
         <Line
           type="monotone" dataKey="o2sat" stroke={VITAL_CONFIG.o2sat.color}
-          strokeWidth={1.5} dot={<AnomalyDot />}
-          connectNulls strokeOpacity={0.8}
+          strokeWidth={2} dot={<AnomalyDot />}
+          connectNulls strokeOpacity={0.9}
         />
         <Line
           type="monotone" dataKey="sbp" stroke={VITAL_CONFIG.sbp.color}
-          strokeWidth={1.5} dot={<AnomalyDot />}
-          connectNulls strokeOpacity={0.8}
+          strokeWidth={2} dot={<AnomalyDot />}
+          connectNulls strokeOpacity={0.9}
         />
         <Line
           type="monotone" dataKey="resp" stroke={VITAL_CONFIG.resp.color}
-          strokeWidth={1.5} dot={<AnomalyDot />}
-          connectNulls strokeOpacity={0.8}
+          strokeWidth={2} dot={<AnomalyDot />}
+          connectNulls strokeOpacity={0.9}
         />
       </LineChart>
     </ResponsiveContainer>

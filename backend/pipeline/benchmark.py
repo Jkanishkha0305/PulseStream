@@ -79,3 +79,29 @@ def stage1_baseline(data: np.ndarray) -> list[int]:
         window = data[i].tolist()
         results.append(_detect_python(window, thresholds))
     return results
+
+
+# ─── Stage 2: NumPy Batch Vectorized ─────────────────────────────────────────
+
+def stage2_numpy(data: np.ndarray) -> np.ndarray:
+    """Vectorized across ALL patients simultaneously — no Python loops over patients."""
+    n_patients, n_rows, n_cols = data.shape
+
+    means = np.mean(data, axis=1, keepdims=True)
+    stds = np.std(data, axis=1, keepdims=True)
+    stds_safe = np.where(stds == 0, 1.0, stds)
+    zscores = np.abs((data - means) / stds_safe)
+    z_last = zscores[:, -1, :]
+    z_flags = z_last > 3.0
+
+    sorted_data = np.sort(data, axis=1)
+    q1 = sorted_data[:, n_rows // 4, :]
+    q3 = sorted_data[:, 3 * n_rows // 4, :]
+    iqr = q3 - q1
+    lo = q1 - 1.5 * iqr
+    hi = q3 + 1.5 * iqr
+    last_vals = data[:, -1, :]
+    iqr_flags = (last_vals < lo) | (last_vals > hi)
+
+    combined = z_flags | iqr_flags
+    return np.sum(combined, axis=1)

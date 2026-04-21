@@ -16,6 +16,8 @@ from pathlib import Path
 import numpy as np
 from numba import njit, prange
 
+from pipeline.multiprocess_detect import stage_multiprocess
+from pipeline.gpu_detect import detect_gpu, GPU_AVAILABLE
 
 try:
     from pipeline.cython_detect import detect_cython

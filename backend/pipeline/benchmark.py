@@ -245,3 +245,54 @@ def _detect_numba_f32_kernel(window: np.ndarray) -> int:
 def stage5_float32(data: np.ndarray) -> list[int]:
     data_f32 = data.astype(np.float32)
     return [_detect_numba_f32_kernel(data_f32[i]) for i in range(data_f32.shape[0])]
+
+
+# ─── Stage 6: Float32 + Parallel (best of everything) ────────────────────────
+
+@njit(parallel=True, cache=True)
+def _detect_batch_parallel_f32(data: np.ndarray) -> np.ndarray:
+    """Float32 + parallel prange for maximum throughput with minimum memory."""
+    n_patients = data.shape[0]
+    n_rows = data.shape[1]
+    results = np.zeros(n_patients, dtype=np.int32)
+
+    for p in prange(n_patients):
+        flags = 0
+        for col in range(5):
+            total = np.float32(0.0)
+            for r in range(n_rows):
+                total += data[p, r, col]
+            mean = total / np.float32(n_rows)
+
+            var_sum = np.float32(0.0)
+            for r in range(n_rows):
+                var_sum += (data[p, r, col] - mean) ** 2
+            std = np.sqrt(var_sum / np.float32(n_rows))
+
+            if std > 0:
+                z = abs((data[p, n_rows - 1, col] - mean) / std)
+            else:
+                z = np.float32(0.0)
+
+            sorted_vals = np.empty(n_rows, dtype=np.float32)
+            for r in range(n_rows):
+                sorted_vals[r] = data[p, r, col]
+            sorted_vals.sort()
+
+            q1 = sorted_vals[n_rows // 4]
+            q3 = sorted_vals[3 * n_rows // 4]
+            iqr = q3 - q1
+            lo = q1 - np.float32(1.5) * iqr
+            hi = q3 + np.float32(1.5) * iqr
+            last_val = data[p, n_rows - 1, col]
+            outlier = last_val < lo or last_val > hi
+
+            if z > 3.0 or outlier:
+                flags += 1
+        results[p] = flags
+    return results
+
+
+def stage6_float32_parallel(data: np.ndarray) -> np.ndarray:
+    data_f32 = data.astype(np.float32)
+    return _detect_batch_parallel_f32(data_f32)

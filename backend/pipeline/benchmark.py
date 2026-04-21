@@ -17,6 +17,13 @@ import numpy as np
 from numba import njit, prange
 
 
+try:
+    from pipeline.cython_detect import detect_cython
+    CYTHON_AVAILABLE = True
+except ImportError:
+    CYTHON_AVAILABLE = False
+
+
 N_PATIENTS = 1000
 WINDOW_SIZE = 50
 VITALS = ["hr", "o2sat", "temp", "sbp", "resp"]
@@ -332,7 +339,14 @@ def run_benchmark(n_patients: int = N_PATIENTS, window_size: int = WINDOW_SIZE) 
         ("Numba JIT", stage3_numba, data, mem_f64),
         ("Numba Parallel", stage4_parallel, data, mem_f64),
         ("Float32 + Parallel", stage6_float32_parallel, data, mem_f32),
+        ("Multiprocessing", lambda d: stage_multiprocess(d, n_workers=4), data, mem_f64),
     ]
+
+    if CYTHON_AVAILABLE:
+        stages.append(("Cython", detect_cython, data, mem_f64))
+
+    gpu_label = "GPU (CuPy)" if GPU_AVAILABLE else "GPU (fallback)"
+    stages.append((gpu_label, detect_gpu, data, mem_f64))
 
     results: list[dict] = []
     baseline_ms = 0.0

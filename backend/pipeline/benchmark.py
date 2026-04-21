@@ -200,3 +200,48 @@ def _detect_batch_parallel(data: np.ndarray) -> np.ndarray:
 
 def stage4_parallel(data: np.ndarray) -> np.ndarray:
     return _detect_batch_parallel(data)
+
+
+# ─── Stage 5: Float32 + Numba ────────────────────────────────────────────────
+
+@njit(cache=True)
+def _detect_numba_f32_kernel(window: np.ndarray) -> int:
+    flags = 0
+    n_rows = window.shape[0]
+    for col in range(5):
+        total = np.float32(0.0)
+        for r in range(n_rows):
+            total += window[r, col]
+        mean = total / np.float32(n_rows)
+
+        var_sum = np.float32(0.0)
+        for r in range(n_rows):
+            var_sum += (window[r, col] - mean) ** 2
+        std = np.sqrt(var_sum / np.float32(n_rows))
+
+        if std > 0:
+            z_val = abs((window[n_rows - 1, col] - mean) / std)
+        else:
+            z_val = np.float32(0.0)
+
+        sorted_vals = np.empty(n_rows, dtype=np.float32)
+        for r in range(n_rows):
+            sorted_vals[r] = window[r, col]
+        sorted_vals.sort()
+
+        q1 = sorted_vals[n_rows // 4]
+        q3 = sorted_vals[3 * n_rows // 4]
+        iqr = q3 - q1
+        lo = q1 - np.float32(1.5) * iqr
+        hi = q3 + np.float32(1.5) * iqr
+        last_val = window[n_rows - 1, col]
+        outlier = last_val < lo or last_val > hi
+
+        if z_val > 3.0 or outlier:
+            flags += 1
+    return flags
+
+
+def stage5_float32(data: np.ndarray) -> list[int]:
+    data_f32 = data.astype(np.float32)
+    return [_detect_numba_f32_kernel(data_f32[i]) for i in range(data_f32.shape[0])]

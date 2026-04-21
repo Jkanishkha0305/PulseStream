@@ -8,6 +8,7 @@ Output: benchmark_results.json
 """
 
 import numpy as np
+from numba import njit
 
 N_PATIENTS = 1000
 WINDOW_SIZE = 50
@@ -149,3 +150,53 @@ def _detect_numba_kernel(window: np.ndarray) -> int:
 
 def stage3_numba(data: np.ndarray) -> list[int]:
     return [_detect_numba_kernel(data[i]) for i in range(data.shape[0])]
+
+
+# ─── Stage 4: Numba Parallel (prange) ────────────────────────────────────────
+
+@njit(parallel=True, cache=True)
+def _detect_batch_parallel(data: np.ndarray) -> np.ndarray:
+    """Process all patients in parallel using Numba prange."""
+    n_patients = data.shape[0]
+    n_rows = data.shape[1]
+    results = np.zeros(n_patients, dtype=np.int32)
+
+    for p in prange(n_patients):
+        flags = 0
+        for col in range(5):
+            total = 0.0
+            for r in range(n_rows):
+                total += data[p, r, col]
+            mean = total / n_rows
+
+            var_sum = 0.0
+            for r in range(n_rows):
+                var_sum += (data[p, r, col] - mean) ** 2
+            std = (var_sum / n_rows) ** 0.5
+
+            if std > 0:
+                z = abs((data[p, n_rows - 1, col] - mean) / std)
+            else:
+                z = 0.0
+
+            sorted_vals = np.empty(n_rows)
+            for r in range(n_rows):
+                sorted_vals[r] = data[p, r, col]
+            sorted_vals.sort()
+
+            q1 = sorted_vals[n_rows // 4]
+            q3 = sorted_vals[3 * n_rows // 4]
+            iqr = q3 - q1
+            lo = q1 - 1.5 * iqr
+            hi = q3 + 1.5 * iqr
+            last_val = data[p, n_rows - 1, col]
+            outlier = last_val < lo or last_val > hi
+
+            if z > 3.0 or outlier:
+                flags += 1
+        results[p] = flags
+    return results
+
+
+def stage4_parallel(data: np.ndarray) -> np.ndarray:
+    return _detect_batch_parallel(data)

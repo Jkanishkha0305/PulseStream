@@ -1,3 +1,15 @@
+/**
+ * PulseStream Patient Detail — "Dark Medical Futurism"
+ *
+ * Visual decisions:
+ * - Header: gradient patient ID badge, breadcrumb with glass styling
+ * - Vital cards: same glass treatment with expanded trend arrows + gradient icons
+ * - Chart: tabbed time windows with animated tab indicator
+ * - Alert timeline: vertical line with glass event cards
+ * - Performance section: bar chart with gradient fills
+ * - Framer motion for staggered entrance animations
+ */
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -30,6 +42,9 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { motion } from "framer-motion";
+import { HeartPulse, Wind, Heart, Thermometer, Activity, ArrowLeft, Clock, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const VITALS_META = [
   {
@@ -39,7 +54,9 @@ const VITALS_META = [
     normalMin: 60,
     normalMax: 100,
     badDirection: "up" as const,
-    color: "#f87171",
+    color: "#ff4757",
+    icon: HeartPulse,
+    gradient: "from-rose-400 to-red-500",
   },
   {
     key: "sbp",
@@ -48,7 +65,9 @@ const VITALS_META = [
     normalMin: 90,
     normalMax: 140,
     badDirection: "up" as const,
-    color: "#fb923c",
+    color: "#ff6348",
+    icon: Heart,
+    gradient: "from-orange-400 to-amber-500",
   },
   {
     key: "o2sat",
@@ -57,7 +76,9 @@ const VITALS_META = [
     normalMin: 95,
     normalMax: 100,
     badDirection: "down" as const,
-    color: "#38bdf8",
+    color: "#1e90ff",
+    icon: Wind,
+    gradient: "from-blue-400 to-cyan-500",
   },
   {
     key: "temp",
@@ -66,7 +87,9 @@ const VITALS_META = [
     normalMin: 36.5,
     normalMax: 37.5,
     badDirection: "up" as const,
-    color: "#facc15",
+    color: "#ffa502",
+    icon: Thermometer,
+    gradient: "from-yellow-400 to-orange-500",
   },
   {
     key: "resp",
@@ -75,7 +98,9 @@ const VITALS_META = [
     normalMin: 12,
     normalMax: 20,
     badDirection: "up" as const,
-    color: "#a78bfa",
+    color: "#a29bfe",
+    icon: Activity,
+    gradient: "from-violet-400 to-purple-500",
   },
 ];
 
@@ -96,11 +121,11 @@ function getVitalBorder(
   normalMin: number,
   normalMax: number
 ): string {
-  if (value === null) return "border-slate-800";
-  if (value < normalMin || value > normalMax) return "border-red-500/40 bg-red-500/5";
+  if (value === null) return "border-white/5 bg-white/[0.02]";
+  if (value < normalMin || value > normalMax) return "border-red-500/30 bg-red-500/[0.04]";
   const border = (normalMax - normalMin) * 0.15;
-  if (value < normalMin + border || value > normalMax - border) return "border-amber-500/40 bg-amber-500/5";
-  return "border-emerald-500/40 bg-emerald-500/5";
+  if (value < normalMin + border || value > normalMax - border) return "border-amber-500/30 bg-amber-500/[0.04]";
+  return "border-emerald-500/30 bg-emerald-500/[0.04]";
 }
 
 function TrendArrow({
@@ -127,9 +152,11 @@ function TrendArrow({
 function VitalCard({
   meta,
   readings,
+  index,
 }: {
   meta: (typeof VITALS_META)[number];
   readings: VitalReading[];
+  index: number;
 }) {
   const curr = readings[0]?.[meta.key as keyof VitalReading] as number | null;
   const prev = readings[1]?.[meta.key as keyof VitalReading] as number | null;
@@ -144,27 +171,39 @@ function VitalCard({
     : curr < meta.normalMin + range * 0.15 || curr > meta.normalMax - range * 0.15 ? "bg-amber-500"
     : "bg-emerald-500";
 
+  const Icon = meta.icon;
+
   return (
-    <div className={`rounded-2xl border p-5 ${border}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-medium">
-          {meta.label}
-        </span>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.4 }}
+      className={`rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 ${border}`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center ${meta.gradient}`}>
+            <Icon className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-[10px] uppercase tracking-widest text-slate-500 font-medium">
+            {meta.label}
+          </span>
+        </div>
         <TrendArrow prev={prev} curr={curr} badDirection={meta.badDirection} />
       </div>
       <div className="flex items-baseline gap-1.5 mb-1">
-        <span className={`text-4xl font-mono font-bold ${color}`}>
-          {curr !== null ? curr.toFixed(1) : "—"}
+        <span className={`text-3xl font-mono font-bold ${color}`}>
+          {curr != null ? curr.toFixed(1) : "—"}
         </span>
         <span className="text-sm font-mono text-slate-500">{meta.unit}</span>
       </div>
       <div className="text-[10px] text-slate-600 font-mono mb-2">
         {meta.normalMin}–{meta.normalMax}
       </div>
-      <div className="h-1 rounded-full bg-slate-800 overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${progressColor}`} style={{ width: `${progress}%` }} />
+      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${progress}%` }} />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -190,6 +229,19 @@ function getBedNumber(patientId: string): string {
   const num = patientId.replace(/[^0-9]/g, "");
   return `Bed ${num || patientId}`;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } },
+};
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -250,53 +302,79 @@ export default function PatientDetailPage() {
       : null;
 
   return (
-    <div className="min-h-screen">
-      <div className="px-6 pt-6 pb-4">
+    <div className="min-h-screen relative">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-violet-600/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-cyan-600/5 rounded-full blur-3xl" />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="px-6 pt-6 pb-4 relative z-10"
+      >
         <div className="flex items-center gap-3 mb-1">
-          <Link href="/dashboard" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
-            ← Dashboard
+          <Link href="/dashboard" className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors">
+            <ArrowLeft className="w-3 h-3" />
+            Dashboard
           </Link>
           <span className="text-slate-700">/</span>
           <h1 className="text-xl font-semibold text-white">{getBedNumber(patientId)}</h1>
-          <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">
+          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-white/5 text-slate-400 border border-white/10">
             {patientId}
           </span>
-          <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-900 ml-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="relative flex items-center gap-1.5 text-[10px] font-mono px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 ml-1">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+            </span>
             LIVE
           </span>
         </div>
         <p className="text-[10px] text-slate-600 font-mono">
           {readings[0] ? `Admitted ${new Date(readings[0].timestamp).toLocaleDateString()}` : "—"}
         </p>
-      </div>
+      </motion.div>
 
       {loading ? (
         <div className="px-6">
           <div className="flex justify-center py-16">
-            <div className="w-3 h-3 rounded-full bg-violet-500 animate-pulse" />
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-400" />
+            </div>
           </div>
         </div>
       ) : (
-        <>
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Vital Cards */}
-          <div className="px-6 grid grid-cols-5 gap-3">
-            {VITALS_META.map((meta) => (
-              <VitalCard key={meta.key} meta={meta} readings={readings} />
+          <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {VITALS_META.map((meta, i) => (
+              <VitalCard key={meta.key} meta={meta} readings={readings} index={i} />
             ))}
           </div>
 
           {/* Chart */}
-          <div className="px-6">
+          <motion.div variants={itemVariants} className="px-6 mt-4">
             <p className="text-[10px] uppercase tracking-widest text-slate-600 font-medium mb-3">
               Vital Signs History
             </p>
-            <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6">
+            <div className="glass-card rounded-2xl p-6">
               <Tabs defaultValue="all" className="w-full">
-                <TabsList className="mb-4 bg-slate-800 border border-slate-700">
-                  <TabsTrigger value="1h" className="data-[state=active]:bg-violet-600 text-xs">1H</TabsTrigger>
-                  <TabsTrigger value="6h" className="data-[state=active]:bg-violet-600 text-xs">6H</TabsTrigger>
-                  <TabsTrigger value="all" className="data-[state=active]:bg-violet-600 text-xs">All</TabsTrigger>
+                <TabsList className="mb-4 bg-white/5 border border-white/10 rounded-xl p-1">
+                  {["1h", "6h", "all"].map((tab) => (
+                    <TabsTrigger
+                      key={tab}
+                      value={tab}
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-violet-500/20 text-xs rounded-lg"
+                    >
+                      {tab === "1h" ? "1H" : tab === "6h" ? "6H" : "All"}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
                 <TabsContent value="1h">
                   <VitalsChart data={chartData.slice(-30)} height={260} />
@@ -309,78 +387,93 @@ export default function PatientDetailPage() {
                 </TabsContent>
               </Tabs>
             </div>
-          </div>
+          </motion.div>
 
           {/* Alert Timeline */}
-          <div className="px-6">
+          <motion.div variants={itemVariants} className="px-6 mt-4">
             <p className="text-[10px] uppercase tracking-widest text-slate-600 font-medium mb-3">
               Alert Timeline
             </p>
             {alerts.length === 0 ? (
-              <div className="text-center py-10 rounded-xl border border-slate-800 text-slate-600">
-                <div className="text-lg mb-1">✓</div>
-                <p className="text-xs">No alerts for this patient</p>
+              <div className="text-center py-10 rounded-2xl glass-card">
+                <div className="w-12 h-12 rounded-xl glass flex items-center justify-center mx-auto mb-3">
+                  <span className="text-emerald-400 text-xl">✓</span>
+                </div>
+                <p className="text-xs text-slate-500">No alerts for this patient</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="relative space-y-3 pl-6">
+                {/* Vertical timeline line */}
+                <div className="absolute left-2.5 top-2 bottom-2 w-px bg-gradient-to-b from-violet-500/30 via-white/5 to-transparent" />
+
                 {alerts.map((alert) => {
                   const isCritical = alert.severity > 0.7;
                   return (
-                    <div
-                      key={alert.id}
-                      className={`rounded-xl border border-slate-800 border-l-4 p-4 ${
-                        isCritical ? "border-l-red-500 bg-red-950/10" : "border-l-amber-500 bg-amber-950/10"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            {alert.vital_flags.map((v) => (
-                              <span
-                                key={v}
-                                className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                                  isCritical
-                                    ? "bg-red-900/60 text-red-300 border border-red-800"
-                                    : "bg-amber-900/60 text-amber-300 border border-amber-800"
-                                }`}
-                              >
-                                {v}
+                    <div key={alert.id} className="relative">
+                      {/* Timeline dot */}
+                      <div className={cn(
+                        "absolute -left-6 top-5 w-3 h-3 rounded-full border-2 border-space",
+                        isCritical ? "bg-red-500" : "bg-amber-500"
+                      )} />
+
+                      <div className={cn(
+                        "glass-card rounded-2xl p-4",
+                        isCritical && "neon-critical"
+                      )}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {alert.vital_flags.map((v) => (
+                                <span
+                                  key={v}
+                                  className={`text-[10px] font-mono px-2 py-0.5 rounded ${
+                                    isCritical
+                                      ? "bg-red-500/15 text-red-300 border border-red-500/20"
+                                      : "bg-amber-500/15 text-amber-300 border border-amber-500/20"
+                                  }`}
+                                >
+                                  {v}
+                                </span>
+                              ))}
+                              <span className={cn(
+                                "text-[10px] font-mono px-2 py-0.5 rounded",
+                                alert.tier === 1
+                                  ? "bg-blue-500/15 text-blue-300 border border-blue-500/20"
+                                  : "bg-purple-500/15 text-purple-300 border border-purple-500/20"
+                              )}>
+                                {alert.tier === 1 ? "Tier 1" : "Tier 2 ML"}
                               </span>
-                            ))}
-                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                              alert.tier === 1
-                                ? "bg-blue-900/60 text-blue-300 border border-blue-800"
-                                : "bg-purple-900/60 text-purple-300 border border-purple-800"
-                            }`}>
-                              {alert.tier === 1 ? "Tier 1" : "Tier 2 ML"}
-                            </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 font-mono">
+                              {relativeTime(alert.triggered_at)} · Severity {(alert.severity * 100).toFixed(0)}%
+                            </p>
                           </div>
-                          <p className="text-[11px] text-slate-500 font-mono">
-                            {relativeTime(alert.triggered_at)} · Severity {(alert.severity * 100).toFixed(0)}%
-                          </p>
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border capitalize ${
+                            alert.status === "pending" ? "bg-red-500/15 text-red-300 border-red-500/20" :
+                            alert.status === "acknowledged" ? "bg-amber-500/15 text-amber-300 border-amber-500/20" :
+                            alert.status === "escalated" ? "bg-orange-500/15 text-orange-300 border-orange-500/20" :
+                            "bg-emerald-500/15 text-emerald-300 border-emerald-500/20"
+                          }`}>
+                            {alert.status}
+                          </span>
                         </div>
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded border capitalize ${
-                          alert.status === "pending" ? "bg-red-900/50 text-red-300 border-red-800" :
-                          alert.status === "acknowledged" ? "bg-amber-900/50 text-amber-300 border-amber-800" :
-                          alert.status === "escalated" ? "bg-orange-900/50 text-orange-300 border-orange-800" :
-                          "bg-emerald-900/50 text-emerald-300 border-emerald-800"
-                        }`}>
-                          {alert.status}
-                        </span>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* Performance */}
-          <div className="px-6">
+          <motion.div variants={itemVariants} className="px-6 mt-4 mb-6">
             <Accordion type="single" collapsible>
-              <AccordionItem value="performance">
-                <AccordionTrigger className="text-sm font-semibold text-slate-300 hover:text-white">
-                  Pipeline Performance
+              <AccordionItem value="performance" className="border-white/5">
+                <AccordionTrigger className="text-sm font-semibold text-slate-300 hover:text-white [&[data-state=open]>svg]:rotate-180">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-violet-400" />
+                    Pipeline Performance
+                  </div>
                 </AccordionTrigger>
                 <AccordionContent>
                   {!benchmarkData ? (
@@ -391,17 +484,17 @@ export default function PatientDetailPage() {
                     <div className="space-y-4 pt-2">
                       <ResponsiveContainer width="100%" height={200}>
                         <BarChart data={benchmarkData} margin={{ left: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                          <XAxis dataKey="name" stroke="#334155" fontSize={10} tick={{ fill: "#64748b" }} />
-                          <YAxis stroke="#334155" fontSize={10} tick={{ fill: "#64748b" }} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                          <XAxis dataKey="name" stroke="rgba(255,255,255,0.1)" fontSize={10} tick={{ fill: "#64748b" }} />
+                          <YAxis stroke="rgba(255,255,255,0.1)" fontSize={10} tick={{ fill: "#64748b" }} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #1e293b", borderRadius: 8 }}
+                            contentStyle={{ backgroundColor: "rgba(15, 23, 42, 0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, backdropFilter: "blur(12px)" }}
                             labelStyle={{ color: "#94a3b8" }}
                             formatter={(val: number, name: string) =>
                               name === "latency" ? [`${val.toFixed(2)} ms`, "Latency"] : [`${val.toFixed(1)}x`, "Speedup"]
                             }
                           />
-                          <Bar dataKey="latency" name="Latency (ms)" radius={[3, 3, 0, 0]}>
+                          <Bar dataKey="latency" name="Latency (ms)" radius={[4, 4, 0, 0]}>
                             {benchmarkData.map((entry) => (
                               <Cell key={entry.name} fill={STAGE_COLORS[entry.name] ?? "#94a3b8"} />
                             ))}
@@ -414,7 +507,7 @@ export default function PatientDetailPage() {
                           { label: "Avg Latency", value: `${avgLatency} ms`, color: "text-white" },
                           { label: "Throughput", value: `${benchmark?.n_patients ?? "—"} pts/cycle`, color: "text-emerald-400" },
                         ].map(({ label, value, color }) => (
-                          <div key={label} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                          <div key={label} className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
                             <div className="text-[10px] uppercase tracking-widest text-slate-600">{label}</div>
                             <div className={`text-sm font-mono font-semibold mt-1 ${color}`}>{value}</div>
                           </div>
@@ -425,8 +518,8 @@ export default function PatientDetailPage() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </div>
-        </>
+          </motion.div>
+        </motion.div>
       )}
     </div>
   );

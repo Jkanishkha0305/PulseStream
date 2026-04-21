@@ -1,0 +1,50 @@
+{
+  "results": [
+    {
+      "stage": "Pure Python",
+      "latency_ms": 444.496,
+      "latency_std_ms": 6.508,
+      "speedup": 1.0,
+      "memory_mb": 19.07
+    },
+    {
+      "stage": "NumPy Vectorized",
+      "latency_ms": 69.2,
+      "latency_std_ms": 0.739,
+      "speedup": 6.42,
+      "memory_mb": 19.07
+    },
+    {
+      "stage": "Numba JIT",
+      "latency_ms": 59.458,
+      "latency_std_ms": 0.434,
+      "speedup": 7.48,
+      "memory_mb": 19.07
+    },
+    {
+      "stage": "Numba Parallel",
+      "latency_ms": 10.731,
+      "latency_std_ms": 0.585,
+      "speedup": 41.42,
+      "memory_mb": 19.07
+    },
+    {
+      "stage": "Float32 + Parallel",
+      "latency_ms": 11.869,
+      "latency_std_ms": 0.307,
+      "speedup": 37.45,
+      "memory_mb": 9.54
+    }
+  ],
+  "summary": {
+    "baseline_ms": 444.496,
+    "best_stage": "Numba Parallel",
+    "best_ms": 10.731,
+    "total_speedup": 41.42,
+    "latency_reduction_pct": 97.6,
+    "memory_reduction_pct": 50.0
+  },
+  "n_patients": 10000,
+  "window_size": 50,
+  "generated_at": "2026-04-21T22:33:03.269691+00:00"
+}

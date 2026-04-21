@@ -32,3 +32,50 @@ def generate_test_data(n_patients: int, window_size: int) -> np.ndarray:
         data[idx, -1, 0] = rng.normal(150, 10)
         data[idx, -1, 3] = rng.normal(180, 15)
     return data
+
+
+# ─── Stage 1: Pure Python (baseline) ─────────────────────────────────────────
+
+def _zscore_python(values: list[float]) -> list[float]:
+    n = len(values)
+    if n < 2:
+        return [0.0] * n
+    mean = sum(values) / n
+    variance = sum((x - mean) ** 2 for x in values) / n
+    std = variance ** 0.5
+    if std == 0:
+        return [0.0] * n
+    return [(x - mean) / std for x in values]
+
+
+def _iqr_flags_python(values: list[float]) -> list[bool]:
+    n = len(values)
+    if n < 4:
+        return [False] * n
+    s = sorted(values)
+    q1 = s[n // 4]
+    q3 = s[3 * n // 4]
+    iqr = q3 - q1
+    lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    return [v < lo or v > hi for v in values]
+
+
+def _detect_python(window: list[list[float]], thresholds: list[float]) -> int:
+    """Returns count of flagged vitals for the latest reading."""
+    flags = 0
+    for col in range(5):
+        vals = [window[row][col] for row in range(len(window))]
+        zscores = _zscore_python(vals)
+        iqr = _iqr_flags_python(vals)
+        if abs(zscores[-1]) > 3.0 or iqr[-1]:
+            flags += 1
+    return flags
+
+
+def stage1_baseline(data: np.ndarray) -> list[int]:
+    results = []
+    thresholds = THRESHOLDS.tolist()
+    for i in range(data.shape[0]):
+        window = data[i].tolist()
+        results.append(_detect_python(window, thresholds))
+    return results

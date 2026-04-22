@@ -31,6 +31,7 @@ interface Props {
 const VITAL_CONFIG = {
   hr: { name: "Heart Rate", unit: "bpm", normalMin: 60, normalMax: 100, color: "#ff4757" },
   o2sat: { name: "SpO₂", unit: "%", normalMin: 95, normalMax: 100, color: "#1e90ff" },
+  temp: { name: "Temperature", unit: "°C", normalMin: 36.5, normalMax: 37.5, color: "#ffa502" },
   sbp: { name: "Systolic BP", unit: "mmHg", normalMin: 90, normalMax: 140, color: "#ff6348" },
   resp: { name: "Resp. Rate", unit: "/min", normalMin: 12, normalMax: 20, color: "#a29bfe" },
 };
@@ -104,6 +105,7 @@ export default function VitalsChart({ data, height = 300 }: Props) {
     timestamp: r.timestamp,
     hr: r.hr,
     o2sat: r.o2sat,
+    temp: r.temp,
     sbp: r.sbp,
     resp: r.resp,
     anomaly_flags: r.anomaly_flags || [],
@@ -153,6 +155,11 @@ export default function VitalsChart({ data, height = 300 }: Props) {
           strokeOpacity={0}
         />
         <ReferenceArea
+          y1={36.5} y2={37.5}
+          fill="#f59e0b" fillOpacity={0.03}
+          strokeOpacity={0}
+        />
+        <ReferenceArea
           y1={12} y2={20}
           fill="#a78bfa" fillOpacity={0.03}
           strokeOpacity={0}
@@ -165,6 +172,11 @@ export default function VitalsChart({ data, height = 300 }: Props) {
         />
         <Line
           type="monotone" dataKey="o2sat" stroke={VITAL_CONFIG.o2sat.color}
+          strokeWidth={2} dot={<AnomalyDot />}
+          connectNulls strokeOpacity={0.9}
+        />
+        <Line
+          type="monotone" dataKey="temp" stroke={VITAL_CONFIG.temp.color}
           strokeWidth={2} dot={<AnomalyDot />}
           connectNulls strokeOpacity={0.9}
         />

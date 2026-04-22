@@ -24,7 +24,6 @@ import {
   BenchmarkResults,
 } from "@/lib/api";
 import VitalsChart from "@/components/VitalsChart";
-import AlertTable from "@/components/AlertTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Accordion,
@@ -43,7 +42,7 @@ import {
   Cell,
 } from "recharts";
 import { motion } from "framer-motion";
-import { HeartPulse, Wind, Heart, Thermometer, Activity, ArrowLeft, Clock, ChevronDown } from "lucide-react";
+import { HeartPulse, Wind, Heart, Thermometer, Activity, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const VITALS_META = [
@@ -225,6 +224,22 @@ function relativeTime(iso: string): string {
   } catch { return iso; }
 }
 
+function formatIcuElapsed(hours: number): string {
+  const totalMinutes = Math.max(0, Math.round(hours * 60));
+  const wholeHours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `+${wholeHours}h ${minutes.toString().padStart(2, "0")}m`;
+}
+
+function filterReadingsByHours(readings: VitalReading[], hours: number): VitalReading[] {
+  if (readings.length === 0) {
+    return [];
+  }
+
+  const latestTimestamp = readings[0]?.timestamp ?? 0;
+  return readings.filter((reading) => reading.timestamp >= latestTimestamp - hours);
+}
+
 function getBedNumber(patientId: string): string {
   const num = patientId.replace(/[^0-9]/g, "");
   return `Bed ${num || patientId}`;
@@ -249,7 +264,7 @@ export default function PatientDetailPage() {
   const [readings, setReadings] = useState<VitalReading[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [benchmark, setBenchmark] = useState<BenchmarkResults | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     try {
@@ -278,12 +293,8 @@ export default function PatientDetailPage() {
       .catch(() => {});
   }, []);
 
-  const chartData = readings
-    .slice()
-    .reverse()
-    .map((r) => ({
-      ...r,
-    }));
+  const latestIcuTimestamp = readings[0]?.timestamp ?? null;
+  const earliestIcuTimestamp = readings[readings.length - 1]?.timestamp ?? null;
 
   const benchmarkData = benchmark?.results
     ? benchmark.results.map((r) => ({
@@ -332,7 +343,9 @@ export default function PatientDetailPage() {
           </span>
         </div>
         <p className="text-[10px] text-slate-600 font-mono">
-          {readings[0] ? `Admitted ${new Date(readings[0].timestamp).toLocaleDateString()}` : "—"}
+          {latestIcuTimestamp !== null && earliestIcuTimestamp !== null
+            ? `ICU window ${formatIcuElapsed(earliestIcuTimestamp)} to ${formatIcuElapsed(latestIcuTimestamp)}`
+            : "—"}
         </p>
       </motion.div>
 
@@ -366,24 +379,24 @@ export default function PatientDetailPage() {
             <div className="glass-card rounded-2xl p-6">
               <Tabs defaultValue="all" className="w-full">
                 <TabsList className="mb-4 bg-white/5 border border-white/10 rounded-xl p-1">
-                  {["1h", "6h", "all"].map((tab) => (
+                  {["6h", "24h", "all"].map((tab) => (
                     <TabsTrigger
                       key={tab}
                       value={tab}
                       className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-violet-500/20 text-xs rounded-lg"
                     >
-                      {tab === "1h" ? "1H" : tab === "6h" ? "6H" : "All"}
+                      {tab === "6h" ? "6H" : tab === "24h" ? "24H" : "All"}
                     </TabsTrigger>
                   ))}
                 </TabsList>
-                <TabsContent value="1h">
-                  <VitalsChart data={chartData.slice(-30)} height={260} />
-                </TabsContent>
                 <TabsContent value="6h">
-                  <VitalsChart data={chartData.slice(-180)} height={260} />
+                  <VitalsChart data={filterReadingsByHours(readings, 6)} height={260} />
+                </TabsContent>
+                <TabsContent value="24h">
+                  <VitalsChart data={filterReadingsByHours(readings, 24)} height={260} />
                 </TabsContent>
                 <TabsContent value="all">
-                  <VitalsChart data={chartData} height={260} />
+                  <VitalsChart data={readings} height={260} />
                 </TabsContent>
               </Tabs>
             </div>

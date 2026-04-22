@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Any, cast
 
@@ -26,15 +26,28 @@ class VitalReadingResponse(BaseModel):
     anomaly_flags: list[str] = []
 
 
+def _apply_order(query: Any, order: Optional[str]) -> Any:
+    if not order:
+        return query
+
+    column, _, direction = order.partition(".")
+    if not column:
+        return query
+
+    return query.order(column, desc=direction.lower() == "desc")
+
+
 def _fetch(tablename: str, **kwargs) -> list[dict[str, Any]]:
     from db.supabase_client import get_supabase
+
     supabase = get_supabase()
     q = supabase.table(tablename).select("*")
+    order = cast(Optional[str], kwargs.pop("order", None))
+
     for k, v in kwargs.items():
-        if k == "order":
-            continue
         q = q.eq(k, v)
-    raw: Any = q.execute().data
+
+    raw: Any = _apply_order(q, order).execute().data
     return cast(list[dict[str, Any]], raw) if raw else []
 
 

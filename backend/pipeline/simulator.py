@@ -1,7 +1,7 @@
 """
 PhysioNet data loader and stream simulator.
 
-Loads real PhysioNet 2019 .psv files OR generates synthetic data
+Loads real PhysioNet 2012 .psv files OR generates synthetic data
 when files are not available.
 """
 import os
@@ -9,7 +9,7 @@ import glob
 import asyncio
 import numpy as np
 import pandas as pd
-from typing import Dict, Iterator, AsyncIterator, Optional, Any
+from typing import Dict, AsyncIterator, Optional, Any
 
 VITAL_COLS = ["hr", "o2sat", "temp", "sbp", "resp"]
 
@@ -110,22 +110,31 @@ class StreamSimulator:
         if self._use_real_data:
             if patient_id not in self.patients:
                 return
+
             df = self.patients[patient_id]
-            for idx in range(len(df)):
-                row = df.iloc[idx]
-                vitals: Dict[str, float] = {}
-                for col in VITAL_COLS:
-                    if col in df.columns and pd.notna(row.get(col)):
-                        vitals[col] = float(row[col])
-                if not vitals:
-                    continue
-                yield {
-                    "patient_id": patient_id,
-                    "timestamp": float(row["timestamp"]),
-                    "vitals": vitals,
-                }
-                if delay > 0:
-                    await asyncio.sleep(delay)
+            idx = self._current_indices.get(patient_id, 0)
+            if idx >= len(df):
+                return
+
+            row = df.iloc[idx]
+            self._current_indices[patient_id] = idx + 1
+
+            vitals: Dict[str, float] = {}
+            for col in VITAL_COLS:
+                if col in df.columns and pd.notna(row.get(col)):
+                    vitals[col] = float(row[col])
+
+            if not vitals:
+                return
+
+            yield {
+                "patient_id": patient_id,
+                "timestamp": float(row["timestamp"]),
+                "vitals": vitals,
+            }
+
+            if delay > 0:
+                await asyncio.sleep(delay)
         else:
             row = self._generate_synthetic_reading(patient_id)
             if row:

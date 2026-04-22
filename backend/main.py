@@ -9,7 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from db.supabase_client import get_supabase
-from pipeline.simulator import StreamSimulator, VITAL_COLS
+from pipeline.simulator import StreamSimulator
 from pipeline.buffer import PatientBuffer
 from pipeline.detector import AnomalyDetector
 from pipeline.optimizer import warmup
@@ -41,7 +41,6 @@ async def pipeline_loop(sim: StreamSimulator):
             for pid in patient_ids:
                 async for reading in sim.stream(pid, delay=0):
                     ts = reading["timestamp"]
-                    ts_iso = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
                     vitals = reading["vitals"]
 
                     buf.push(pid, vitals)
@@ -78,7 +77,6 @@ async def pipeline_loop(sim: StreamSimulator):
                         print(f"[pipeline] Failed to insert vital reading for {pid}: {e}")
 
                     if tier_result and tier_result.get("severity", 0) > 0.5:
-                        severity_label = "critical" if tier_result.get("severity", 0) > 0.7 else "high"
                         alert = {
                             "patient_id": pid,
                             "timestamp": ts,
@@ -86,7 +84,9 @@ async def pipeline_loop(sim: StreamSimulator):
                             "severity": tier_result.get("severity", 0),
                             "tier": tier_result.get("tier", 1),
                             "status": "pending",
-                            "triggered_at": ts_iso,
+                            # Alerts should reflect when the system raised them, not the ICU
+                            # elapsed-hour timestamp attached to the patient reading.
+                            "triggered_at": datetime.now(timezone.utc).isoformat(),
                         }
                         try:
                             supabase.table("alerts").insert(alert).execute()

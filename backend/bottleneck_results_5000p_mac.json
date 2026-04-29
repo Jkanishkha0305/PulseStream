@@ -1,0 +1,131 @@
+{
+  "platform": "macOS-26.1-arm64-arm-64bit",
+  "torch_version": "2.5.1",
+  "mps_available": true,
+  "cuda_available": false,
+  "workload": {
+    "n_patients": 5000,
+    "n_readings": 50,
+    "n_vitals": 5,
+    "z_threshold": 3.0
+  },
+  "results": [
+    {
+      "block": "1. Pure Python loops",
+      "time_ms": 399.637,
+      "speedup_vs_prev": 1.0,
+      "speedup_vs_baseline": 1.0,
+      "narrative": {
+        "did": "Triple-nested for-loops over (patient, vital, reading)",
+        "bottleneck": "CPython interpreter overhead \u2014 every op boxed/unboxed, GIL-bound",
+        "used": "(baseline)",
+        "solved": "(this is the baseline we improve from)"
+      },
+      "anomalous_patients": 1936
+    },
+    {
+      "block": "2. NumPy vectorization",
+      "time_ms": 14.932,
+      "speedup_vs_prev": 26.76,
+      "speedup_vs_baseline": 26.76,
+      "narrative": {
+        "did": "Replaced loops with broadcasted array ops (mean, std, abs, comparison)",
+        "bottleneck": "Interpreter dispatch was 99% of the time, not the math",
+        "used": "NumPy broadcasting \u2192 SIMD-accelerated C kernels",
+        "solved": "One vectorised line replaces three Python loops"
+      },
+      "anomalous_patients": 1936
+    },
+    {
+      "block": "3. Numba @njit (single thread)",
+      "time_ms": 2.343,
+      "speedup_vs_prev": 6.37,
+      "speedup_vs_baseline": 170.57,
+      "narrative": {
+        "did": "JIT-compiled the original Python loops to native machine code",
+        "bottleneck": "NumPy creates large temporary arrays for each op (memory bw)",
+        "used": "@njit(cache=True) \u2014 LLVM compilation, no temporaries",
+        "solved": "Loops fuse; one pass over data instead of N passes"
+      },
+      "anomalous_patients": 1936
+    },
+    {
+      "block": "4. Numba parallel (prange)",
+      "time_ms": 0.482,
+      "speedup_vs_prev": 4.86,
+      "speedup_vs_baseline": 828.91,
+      "narrative": {
+        "did": "Replaced range() with prange() over patients",
+        "bottleneck": "Single-threaded \u2014 only 1 of 8+ cores in use",
+        "used": "@njit(parallel=True) + prange \u2014 compiler-level OpenMP-style threading",
+        "solved": "Patients are independent (embarrassingly parallel); all cores busy"
+      },
+      "anomalous_patients": 1936
+    },
+    {
+      "block": "5. float32 + Numba parallel",
+      "time_ms": 0.98,
+      "speedup_vs_prev": 0.49,
+      "speedup_vs_baseline": 407.91,
+      "narrative": {
+        "did": "Down-cast input from float64 \u2192 float32 before the kernel",
+        "bottleneck": "Memory bandwidth \u2014 8 bytes/cell x N_cells exceeds L2 cache",
+        "used": "float32 halves the working-set; twice as many values per cache line",
+        "solved": "Better cache utilisation; clinical precision unaffected (~7 dp)"
+      },
+      "anomalous_patients": 1936
+    },
+    {
+      "block": "6. Cython (AOT-compiled .pyx)",
+      "time_ms": 22.934,
+      "speedup_vs_prev": 0.04,
+      "speedup_vs_baseline": 17.43,
+      "narrative": {
+        "did": "Compiled a typed .pyx kernel with float64_t[:, :, :] memoryviews",
+        "bottleneck": "JIT warmup cost on first call (Numba) \u2014 Cython is AOT",
+        "used": "cdef typed locals + boundscheck(False) + wraparound(False)",
+        "solved": "Same near-C performance, but compiled once at install time"
+      },
+      "anomalous_patients": 280
+    },
+    {
+      "block": "7. PyTorch CPU tensors",
+      "time_ms": 7.838,
+      "speedup_vs_prev": 2.93,
+      "speedup_vs_baseline": 50.99,
+      "narrative": {
+        "did": "Same NumPy logic, but using torch.Tensor on CPU",
+        "bottleneck": "NumPy uses generic BLAS; PyTorch uses MKL/Accelerate w/ vectorisation",
+        "used": "torch CPU backend (Apple Accelerate framework on macOS)",
+        "solved": "Better SIMD use + multi-threaded BLAS"
+      },
+      "anomalous_patients": 1936
+    },
+    {
+      "block": "8. Apple Metal GPU (PyTorch MPS)",
+      "time_ms": 4.165,
+      "speedup_vs_prev": 1.88,
+      "speedup_vs_baseline": 95.96,
+      "narrative": {
+        "did": "Moved tensor to MPS device; ran the same ops on Apple GPU",
+        "bottleneck": "CPU peaks at ~8 cores; GPU has thousands of ALUs",
+        "used": "torch.device('mps') + tensor.to(device); torch.mps.synchronize()",
+        "solved": "Massively parallel reduction across all (patient, vital) pairs at once"
+      },
+      "anomalous_patients": 1936
+    },
+    {
+      "block": "9. Numba CUDA kernel (simulator)",
+      "time_ms": 1472.757,
+      "speedup_vs_prev": 0.0,
+      "speedup_vs_baseline": 0.27,
+      "narrative": {
+        "did": "Wrote a @cuda.jit kernel: 1 thread per patient, block size 64",
+        "bottleneck": "No NVIDIA GPU on this machine \u2014 uses CUDA simulator (CPU)",
+        "used": "@cuda.jit + cuda.grid(1) \u2014 same code runs on CPU sim or real GPU",
+        "solved": "Code-portability: identical kernel runs on professor's CUDA cluster"
+      },
+      "anomalous_patients": 1936
+    }
+  ]
+}

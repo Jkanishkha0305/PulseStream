@@ -438,15 +438,32 @@ def main():
         if rec:
             results.append(rec)
 
-    # Block 9 — Numba CUDA simulator (concept-only)
+    # Block 9 — Numba CUDA (real GPU if available, else simulator)
     if NUMBA_CUDA_OK:
+        # Detect whether we're actually on a real GPU or the simulator
+        using_sim = os.environ.get("NUMBA_ENABLE_CUDASIM") == "1"
+        try:
+            real_gpu = (not using_sim) and cuda.is_available() and cuda.detect()
+        except Exception:
+            real_gpu = (not using_sim)
+        gpu_label = "real GPU" if real_gpu else "simulator"
+        gpu_bottleneck = (
+            "Single-threaded CPU work; GPUs have thousands of ALUs running in parallel"
+            if real_gpu else
+            "No NVIDIA GPU on this machine — uses CUDA simulator (CPU)"
+        )
+        gpu_solved = (
+            "Massive thread-level parallelism: each patient handled by its own GPU thread"
+            if real_gpu else
+            "Code-portability: identical kernel runs on professor's CUDA cluster"
+        )
         prev_ms_cuda, rec = block(
-            "9. Numba CUDA kernel (simulator)", detect_cuda, data, prev_ms, baseline_ms,
+            f"9. Numba CUDA kernel ({gpu_label})", detect_cuda, data, prev_ms, baseline_ms,
             {
                 "did": "Wrote a @cuda.jit kernel: 1 thread per patient, block size 64",
-                "bottleneck": "No NVIDIA GPU on this machine — uses CUDA simulator (CPU)",
-                "used": "@cuda.jit + cuda.grid(1) — same code runs on real GPU unchanged",
-                "solved": "Code-portability: identical kernel runs on professor's CUDA cluster",
+                "bottleneck": gpu_bottleneck,
+                "used": "@cuda.jit + cuda.grid(1) — same code runs on CPU sim or real GPU",
+                "solved": gpu_solved,
             })
         if rec:
             results.append(rec)

@@ -114,3 +114,143 @@ def generate_patient_vital_product(
     Uses itertools.product to avoid nested loops.
     """
     return itertools.product(patient_ids, vital_names)
+
+
+# ===================================================================
+# Additional itertools demonstrations (Lecture 03 completeness)
+# ===================================================================
+
+def count_patient_ids(start: int = 1) -> Iterator[int]:
+    """Infinite patient ID generator using itertools.count.
+
+    >>> import itertools
+    >>> list(itertools.islice(count_patient_ids(100), 3))
+    [100, 101, 102]
+    """
+    return itertools.count(start)
+
+
+def cycle_alert_levels() -> Iterator[str]:
+    """Cycle through alert severity levels indefinitely.
+
+    Uses itertools.cycle for round-robin assignment.
+
+    >>> import itertools
+    >>> list(itertools.islice(cycle_alert_levels(), 5))
+    ['low', 'medium', 'high', 'low', 'medium']
+    """
+    return itertools.cycle(["low", "medium", "high"])
+
+
+def compress_patients(
+    patient_ids: list[str],
+    mask: list[bool],
+) -> Iterator[str]:
+    """Select patients where mask is True using itertools.compress.
+
+    >>> list(compress_patients(["P1","P2","P3"], [True, False, True]))
+    ['P1', 'P3']
+    """
+    return itertools.compress(patient_ids, mask)
+
+
+def dropwhile_stable(
+    readings: Iterator[float],
+    threshold: float = 3.0,
+) -> Iterator[float]:
+    """Skip stable readings until the first anomalous one.
+
+    Uses itertools.dropwhile to fast-forward past normal values.
+
+    >>> list(dropwhile_stable(iter([1.0, 0.5, 4.0, 0.2, 5.0])))
+    [4.0, 0.2, 5.0]
+    """
+    return itertools.dropwhile(lambda x: abs(x) < threshold, readings)
+
+
+def takewhile_normal(
+    readings: Iterator[float],
+    threshold: float = 3.0,
+) -> Iterator[float]:
+    """Take readings while they are within normal range.
+
+    Uses itertools.takewhile — stops at the first anomaly.
+
+    >>> list(takewhile_normal(iter([0.5, 1.0, 4.0, 0.2])))
+    [0.5, 1.0]
+    """
+    return itertools.takewhile(lambda x: abs(x) < threshold, readings)
+
+
+def filterfalse_normal(
+    readings: Iterator[float],
+    threshold: float = 3.0,
+) -> Iterator[float]:
+    """Keep only anomalous readings (complement of filter).
+
+    Uses itertools.filterfalse to invert the predicate.
+
+    >>> list(filterfalse_normal(iter([0.5, 4.0, 1.0, 5.0])))
+    [4.0, 5.0]
+    """
+    return itertools.filterfalse(lambda x: abs(x) < threshold, readings)
+
+
+def groupby_severity(
+    alerts: list[dict],
+) -> dict[str, list[dict]]:
+    """Group alerts by severity level using itertools.groupby.
+
+    Input must be sorted by the grouping key.
+
+    >>> alerts = [{"sev":"high","id":1},{"sev":"high","id":2},{"sev":"low","id":3}]
+    >>> result = groupby_severity(alerts)
+    >>> list(result.keys())
+    ['high', 'low']
+    """
+    sorted_alerts = sorted(alerts, key=lambda a: a.get("sev", ""))
+    return {
+        key: list(group)
+        for key, group in itertools.groupby(
+            sorted_alerts, key=lambda a: a.get("sev", "")
+        )
+    }
+
+
+def starmap_zscore(
+    vital_params: list[tuple[float, float, float]],
+) -> list[float]:
+    """Compute z-scores from (value, mean, std) tuples using starmap.
+
+    >>> starmap_zscore([(100, 80, 10), (95, 97, 2)])
+    [2.0, -1.0]
+    """
+    def zscore(val, mean, std):
+        return (val - mean) / std if std > 0 else 0.0
+    return list(itertools.starmap(zscore, vital_params))
+
+
+def tee_vital_stream(
+    stream: Iterator,
+    n: int = 2,
+) -> tuple:
+    """Duplicate a vital stream for independent consumption using tee.
+
+    >>> import itertools
+    >>> a, b = tee_vital_stream(iter([1,2,3]))
+    >>> list(a), list(b)
+    ([1, 2, 3], [1, 2, 3])
+    """
+    return itertools.tee(stream, n)
+
+
+def zip_longest_vitals(
+    *vital_streams: Iterator[float],
+    fillvalue: float = 0.0,
+) -> Iterator[tuple]:
+    """Align vital streams of unequal length using zip_longest.
+
+    >>> list(zip_longest_vitals(iter([1,2]), iter([3,4,5])))
+    [(1, 3), (2, 4), (0.0, 5)]
+    """
+    return itertools.zip_longest(*vital_streams, fillvalue=fillvalue)

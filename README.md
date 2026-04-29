@@ -45,7 +45,7 @@ Same anomaly-detection algorithm. Same input data. Nine implementations, two har
 | 5 | float32 + Numba parallel | 0.98 ms | 4.31 ms | 250 – 408× |
 | 6 | Cython AOT-compiled `.pyx` | 22.93 ms | 19.00 ms | 17 – 57× |
 | 7 | PyTorch CPU tensors | 7.84 ms | 31.99 ms | 34 – 51× |
-| 8 | **Apple Metal GPU (PyTorch MPS)** | **4.16 ms** ⭐ | N/A | 96× |
+| 8 | **Apple Metal GPU (PyTorch MPS)** | **4.17 ms** ⭐ | N/A | 96× |
 | 9 | **NVIDIA T4 GPU (Numba CUDA)** | N/A | **4.21 ms** ⭐ | 256× |
 
 ### 50,000 patients × 50 readings × 5 vitals (12.5M cells)
@@ -59,7 +59,7 @@ Same anomaly-detection algorithm. Same input data. Nine implementations, two har
 | 5 | float32 + Numba parallel | 10.89 ms | 55.78 ms | 205 – 382× |
 | 6 | Cython AOT-compiled `.pyx` | 238.51 ms | 203.43 ms | 17 – 56× |
 | 7 | PyTorch CPU tensors | 64.92 ms | 314.92 ms | 36 – 64× |
-| 8 | **Apple Metal GPU (PyTorch MPS)** | **40.22 ms** ⭐ | N/A | 103× |
+| 8 | **Apple Metal GPU (PyTorch MPS)** | **40.23 ms** ⭐ | N/A | 103× |
 | 9 | **NVIDIA T4 GPU (Numba CUDA)** | N/A | **33.11 ms** ⭐ | 346× |
 
 > Raw JSON for every cell of the matrix: `backend/bottleneck_results_{5000,50000}p_{mac,t4}.json`
@@ -67,7 +67,7 @@ Same anomaly-detection algorithm. Same input data. Nine implementations, two har
 ### Three insights from the data
 
 1. **Numba parallel on Apple Silicon is the overall winner** — `4.85 ms` for 50,000 patients (857× speedup). It outperforms even the NVIDIA T4 GPU because the kernel is memory-bound, not compute-bound.
-2. **Apple Metal GPU ≈ NVIDIA T4 GPU at 5k patients** (4.16 vs 4.21 ms — within 1.2%). At this workload size, a consumer-grade integrated GPU matches a datacenter accelerator. PCIe / unified-memory transfer dominates kernel time on both platforms.
+2. **Apple Metal GPU ≈ NVIDIA T4 GPU at 5k patients** (4.17 vs 4.21 ms — within 1%). At this workload size, a consumer-grade integrated GPU matches a datacenter accelerator. PCIe / unified-memory transfer dominates kernel time on both platforms.
 3. **Linear scaling = correctness control.** Pure Python: 5k → 50k = 10.4× slower (expected ~10×). Numba parallel: 5k → 50k = 10.1× slower. No hidden complexity bugs, no caching artifacts.
 
 ---

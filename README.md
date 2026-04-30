@@ -12,7 +12,7 @@
 ![Apple Metal](https://img.shields.io/badge/Apple_Metal-MPS-000000?logo=apple&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white)
 
-**NYU Advanced Python — Final Project**
+<img src="assets/pulsestream.png" alt="PulseStream" width="640" />
 
 </div>
 
